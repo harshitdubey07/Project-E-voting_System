@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>E-Voting System</title>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1e1e2f, #3a3a5a);
+      color: white;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+
+    h1 {
+      margin-top: 20px;
+    }
+
+    .container {
+      width: 350px;
+      margin: auto;
+      background:rgba(255,255,255,0.08);
+      padding: 20px;
+      margin-top: 50px;
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    input {
+      width: 90%;
+      padding: 10px;
+      margin: 10px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+    }
+
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(45deg, #00c6ff, #0072ff);
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 8px;
+      margin: 5px;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+    }
+
+    .card {
+      margin: 15px 0;
+      padding: 15px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th {
+      background: #0072ff;
+      padding: 10px;
+    }
+
+    td {
+      padding: 10px;
+      background: rgba(255,255,255,0.1);
+    }
+
+    tr:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    #dashboard {
+      display: none;
+    }
+
+    #adminPanel {
+      display: none;
+    }
+
+    #winner div {
+      animation: pop 0.5s ease;
+    }
+
+    @keyframes pop {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🗳️ E-Voting System</h1>
+
+<!-- LOGIN -->
+<div class="container" id="loginBox">
+  <h2>Welcome Back 👋</h2>
+  <p>Login to continue</p>
+  <input id="voter_id" placeholder="Enter Voter ID">
+  <input id="password" type="password" placeholder="Enter Password">
+  <button onclick="login()">Login</button>
+</div>
+
+<!-- USER DASHBOARD -->
+<div class="container" id="dashboard">
+  <h2>🗳️ Voting Dashboard</h2>
+
+  <div class="card">
+    <h3>Vote</h3>
+    <input id="candidate_id" placeholder="Candidate ID">
+    <button onclick="vote()">Submit Vote</button>
+  </div>
+
+  <div class="card">
+    <h3>Results</h3>
+    <button onclick="getResults()">Show Results</button>
+    <div id="results"></div>
+  </div>
+
+  <div class="card">
+    <h3>Winner 🏆</h3>
+    <button onclick="getWinner()">Show Winner</button>
+    <div id="winner"></div>
+  </div>
+
+  <button onclick="logout()">Logout</button>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="container" id="adminPanel">
+  <h2>👑 Admin Dashboard</h2>
+
+  <div class="card">
+    <h3>➕ Add Candidate</h3>
+    <input id="newCandidate" placeholder="Candidate Name">
+    <button onclick="addCandidate()">Add</button>
+  </div>
+
+  <div class="card">
+    <h3>❌ Remove Candidate</h3>
+    <input id="removeCandidateId" placeholder="Candidate ID">
+    <button onclick="removeCandidate()">Remove</button>
+  </div>
+
+  <div class="card">
+    <h3>🗳️ Election Control</h3>
+    <button onclick="startElection()">Start</button>
+    <button onclick="stopElection()">Stop</button>
+  </div>
+
+  <div class="card">
+    <h3>📊 Results</h3>
+    <button onclick="getResults()">Show Results</button>
+    <div id="results"></div>
+  </div>
+
+  <div class="card">
+    <h3>🏆 Winner</h3>
+    <button onclick="getWinner()">Show Winner</button>
+    <div id="winner"></div>
+  </div>
+
+  <button onclick="logout()">Logout</button>
+</div>
+
+<script>
+let token = "";
+
+// LOGIN
+function login() {
+  const voter = document.getElementById("voter_id").value;
+  const pass = document.getElementById("password").value;
+
+  // ADMIN LOGIN
+  if (voter === "admin" && pass === "admin123") {
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("adminPanel").style.display = "block";
+    return;
+  }
+
+  fetch("http://localhost:5000/api/login", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ voter_id: voter, password: pass })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.token) {
+      token = data.token;
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+    }
+    alert(data.message);
+  });
+}
+
+// VOTE
+function vote() {
+  fetch("http://localhost:5000/api/vote", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "authorization": token
+    },
+    body: JSON.stringify({
+      voter_id: document.getElementById("voter_id").value,
+      candidate_id: document.getElementById("candidate_id").value
+    })
+  })
+  .then(res => res.text())
+  .then(data => alert(data));
+}
+
+// RESULTS
+function getResults() {
+  fetch("http://localhost:5000/api/results")
+  .then(res => res.json())
+  .then(data => {
+    let html = `<table>
+      <tr><th>Candidate</th><th>Votes</th></tr>`;
+
+    let max = Math.max(...data.map(d => d.total_votes));
+
+    data.forEach(item => {
+      let style = item.total_votes === max ? "background:lightgreen;" : "";
+      html += `<tr style="${style}">
+        <td>${item.name}</td>
+        <td>${item.total_votes}</td>
+      </tr>`;
+    });
+
+    html += "</table>";
+    document.getElementById("results").innerHTML = html;
+  });
+}
+
+// WINNER
+function getWinner() {
+  fetch("http://localhost:5000/api/winner")
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("winner").innerHTML = `
+      <div style="background:gold; padding:15px; border-radius:10px;">
+        🎉 Winner: ${data.name} 🏆<br>
+        Votes: ${data.total_votes}
+      </div>
+    `;
+  });
+}
+
+// ADMIN FUNCTIONS
+function addCandidate() {
+  fetch("http://localhost:5000/api/add-candidate", {
+    method: "POST",
+    headers: {"Content-Type": "application/json","authorization": token},
+    body: JSON.stringify({ name: document.getElementById("newCandidate").value })
+  })
+  .then(res => res.text())
+  .then(data => alert(data));
+}
+
+function removeCandidate() {
+  fetch("http://localhost:5000/api/remove-candidate", {
+    method: "POST",
+    headers: {"Content-Type": "application/json","authorization": token},
+    body: JSON.stringify({ id: document.getElementById("removeCandidateId").value })
+  })
+  .then(res => res.text())
+  .then(data => alert(data));
+}
+
+function startElection() {
+  fetch("http://localhost:5000/api/start-election", {
+    method: "POST",
+    headers: {"authorization": token}
+  }).then(res => res.text()).then(alert);
+}
+
+function stopElection() {
+  fetch("http://localhost:5000/api/stop-election", {
+    method: "POST",
+    headers: {"authorization": token}
+  }).then(res => res.text()).then(alert);
+}
+
+// LOGOUT
+function logout() {
+  token = "";
+  document.getElementById("dashboard").style.display = "none";
+  document.getElementById("adminPanel").style.display = "none";
+  document.getElementById("loginBox").style.display = "block";
+}
+</script>
+
+</body>
+</html>
